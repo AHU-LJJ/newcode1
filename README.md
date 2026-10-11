@@ -1,5 +1,7 @@
 # CAPS
 
+**新对话接手入口：[HANDOFF.md](HANDOFF.md)**。包含已核验进度、环境/API 配置、实验产物导航、下一阶段分岔及 Git 提交/推送办法。
+
 代码仓库：[AHU-LJJ/newcode1](https://github.com/AHU-LJJ/newcode1)。当前进度和下一步见 [PROJECT_STATUS.md](PROJECT_STATUS.md)，模块职责、数据布局、环境恢复与复现边界见 [CODE_STRUCTURE.md](CODE_STRUCTURE.md)。仓库保存代码、测试、依赖锁文件、配置示例、研究笔记与结果文档；本地数据集、模型、环境、密钥及 `runs/` 实验产物不入库。历史报告中的 `runs/` 和本地 PDF 链接需要原实验目录，GitHub 克隆中没有这些文件。
 
 新增独立的 **SPM 情境化偏好记忆系统**：全程使用硅基流动 API 与 BAAI/bge-m3，支持 PrefEval、PERMA、CUPID、BenchPreS、并发缓存及断点续跑。实现、运行命令和评测边界见 [SPM.md](SPM.md)，四基准首轮开发集验证见 [SPM_RESULTS.md](SPM_RESULTS.md)。既有 graphmem 保持当前进度。
