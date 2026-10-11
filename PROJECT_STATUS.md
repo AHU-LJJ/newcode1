@@ -1,0 +1,44 @@
+# 项目进度
+
+更新：2026-10-11。项目名 CAPS，代码仓库 `AHU-LJJ/newcode1`。代码结构、依赖恢复和未提交数据的布局见 [CODE_STRUCTURE.md](CODE_STRUCTURE.md)。
+
+当前默认：`Qwen/Qwen2.5-7B-Instruct + v6_compact`；嵌入为 BAAI/bge-m3 API，裁判为 DeepSeek-V3.2 API。后续实验排除 PrefEval；默认 `all` 包含 PERMA、CUPID、BenchPreS。早期 graphmem 保持现有进度，没有引入强化学习。
+
+## 已完成
+
+| 阶段 | 状态与结果文档 |
+| --- | --- |
+| graphmem / HotpotQA / LoCoMo | 原型与小规模 API 验证，见 [GRAPH_MEMORY.md](GRAPH_MEMORY.md)、[HotpotQA 结果](EXPERIMENT_RESULTS.md)、[LoCoMo 结果](LOCOMO_RESULTS.md) |
+| SPM M0–M3 | 原型、门控与原文证据消融，见 [汇总](SPM_RESULTS.md)及各轮报告 |
+| SPM M4–M5 | Qwen 小模型替换与接口可靠性改善，见 [M4](SPM_M4_RESULTS.md)、[M5](SPM_M5_RESULTS.md) |
+| SPM M6–M7 | 图与平铺、保守更新对照，尚未确认稳定收益，见 [M6](SPM_M6_RESULTS.md)、[M7](SPM_M7_RESULTS.md) |
+| SPM M8 | CUPID 五方法对照及一次有界失败续跑完成，见 [方案](SPM_M8_PROTOCOL.md)、[结果](SPM_M8_RESULTS.md)、[诊断](SPM_M8_DIAGNOSTICS.md) |
+| CUPID 对齐分补测 | 官方发布提示下 93 份已有回答补评完成，见 [结果](SPM_M8_ALIGNMENT_RESULTS.md) |
+
+M8 主测试 93/120 方法项有效；五方法共同有效 15/24 题（changing 6、consistent 5、contrastive 4）。共同题上的结果为：
+
+| 方法 | Checklist F1 | Preference alignment score（1–10） |
+| --- | ---: | ---: |
+| 原图 | 0.525 | 5.47 |
+| 对象/维度图 | 0.456 | 5.47 |
+| 平铺记忆 | 0.377 | 5.60 |
+| 原文 RAG | 0.249 | 5.33 |
+| 完整历史 | 0.280 | 5.07 |
+
+原图减平铺 F1 为 +0.148，95% 区间 [+0.031, +0.275]，是未校正多重比较且存在缺失的探索性信号；对象/维度图减平铺的 F1 主比较区间跨零。两种图方法的偏好对齐分减平铺均 -0.133，配对区间均跨零，尚未确认生成对齐收益。偏好推断 F1 与回答实际满足偏好的程度应分别评估。
+
+新图的三次 supersede 全在同一 changing 问题，存在把“助手修订更符合原偏好”误作“用户偏好改变”的迹象，尚未验证真实更新召回。原始执行缺失 27 项，不能计为答错，也不能用共同成功子集替代完整基准。
+
+对齐分补测使用官方逐项分析提示，真实偏好和 checklist 只进入裁判；裁判为 DeepSeek-V3.2，替代论文 GPT-4o，不能直接横比论文绝对分数。93/93 补评成功，90 次 HTTP、150,578 个已知 tokens、0 未知用量；93 份评分从缓存精确离线回放，0 HTTP。原生成、旧 F1/response_score 与历史样本保持不变。
+
+## 已实现，尚未运行 API 实验
+
+[M9 方案](SPM_M9_PROTOCOL.md)已准备：严格布尔抽取、请求内有界来源/实体编号、跨 USER turn 逐字复制错绑检查、完整概率数组门控，以及区分助手草稿修订与偏好转变的关系提示。此前 120 项测试通过，另有 14 项新增 CUPID 对齐评分测试通过。M9 尚未预留题组或调用 API，没有效果结果。
+
+下一轮应按 M9 方案使用新身份组冻结开发和主测试，先验证执行覆盖与门控成本，再比较图、平铺及原文/完整历史。应同时报告 checklist F1、偏好对齐分、完成率和成本，并保持原实验成功结果及独立评分协议。当前不提升实验变体为默认。
+
+## 版本管理范围
+
+代码、测试、依赖锁文件、配置示例、方案、进度和结果 Markdown 入库。本地数据集、模型权重、环境、密钥、下载 PDF、原始实验结果及缓存均忽略。报告内 `runs/` 证据链接仅在保留原运行目录的机器可用；新克隆不包含这些产物。
+
+初始化 Git 前已检查待提交内容，未发现本地凭据。仅导出待提交文件、没有 `.env` 或数据集的目录中，测试结果为 **132 passed, 2 skipped**；两项跳过依赖本地基准文件。一个原先依赖 PrefEval 下载数据的 case-file 校验测试改用临时合成样本，验证逻辑不变。

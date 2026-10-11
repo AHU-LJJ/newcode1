@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/kixlab/CUPID",
+  "revision": "a8560cab293ae98be4fe260689d58bddf96b51ef",
+  "files": {
+    "prompts/evaluation/response_judger.yaml": {
+      "url": "https://raw.githubusercontent.com/kixlab/CUPID/a8560cab293ae98be4fe260689d58bddf96b51ef/prompts/evaluation/response_judger.yaml",
+      "sha256": "254de52c9d88136b6d12745ee6d48507345de741bd31dd219a9968b53a3de0a9"
+    },
+    "evaluation/pipeline/evaluate.py": {
+      "url": "https://raw.githubusercontent.com/kixlab/CUPID/a8560cab293ae98be4fe260689d58bddf96b51ef/evaluation/pipeline/evaluate.py",
+      "sha256": "eaead752332b51761f292c5c88f7279890d8718af2ca0ce75647f63c05b36b91"
+    },
+    "evaluation/modules/response_judger.py": {
+      "url": "https://raw.githubusercontent.com/kixlab/CUPID/a8560cab293ae98be4fe260689d58bddf96b51ef/evaluation/modules/response_judger.py",
+      "sha256": "b13590949c6483d12d9bf04cf93517aeb8c63d51ce5a0b6a4dff90bf62039c22"
+    },
+    "LICENSE": {
+      "url": "https://raw.githubusercontent.com/kixlab/CUPID/a8560cab293ae98be4fe260689d58bddf96b51ef/LICENSE",
+      "sha256": "e10b3d809c3d53c0cfe38bcbaa3f0268f6ff31a8873e8321eeebcfb54b6dea80"
+    }
+  }
+}

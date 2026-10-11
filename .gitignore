@@ -1,0 +1,57 @@
+# Local environments, caches and Python build output
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.uv/
+build/
+dist/
+.coverage*
+htmlcov/
+
+# Credentials; only blank configuration examples are tracked
+.env*
+*.env
+*.env.*
+!.env.example
+!spm.env.example
+secrets/
+*.pem
+*.key
+
+# Local datasets, model weights and experiment artifacts
+/datasets/
+/models/
+/runs/
+/artifacts/
+/results/
+/outputs/
+/checkpoints/
+/logs/
+/wandb/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.db
+*.db-*
+*.log
+*.parquet
+*.arrow
+*.jsonl
+*.npy
+*.npz
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+
+# Downloaded paper PDFs stay local; notes and attributed prompt sources are tracked
+*.pdf
+.DS_Store

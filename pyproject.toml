@@ -1,0 +1,31 @@
+[project]
+name = "caps"
+version = "0.1.0"
+description = "CAPS PyTorch workspace"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "httpx>=0.28.1",
+    "nltk>=3.10.3",
+    "numpy>=2.5.3",
+    "pyarrow>=26.0.0",
+    "pydantic>=2.6,<3",
+    "python-dotenv>=1.2.4",
+    "sentencepiece>=0.2.2",
+    "torch==2.13.0",
+    "torchvision==0.28.0",
+    "transformers>=4.51,<5",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
