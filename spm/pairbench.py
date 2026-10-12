@@ -109,6 +109,59 @@ async def spm_contexts(api, item, notes, cfg, directory):
         store.close()
 
 
+ORACLES = ('O1', 'O2')
+
+
+def oracle_decisions(decisions, candidates, target, side, mode):
+    """P3 gate oracle on recorded L4 decisions; labels exist only for the target.
+
+    O1: target decision replaced by its label (apply on positive, suppress on
+    negative), companion decisions kept as gated. O2: as O1, and every companion
+    suppressed, since by construction companions do not change the best answer.
+    A target the retriever missed stays missing: the oracle fixes the gate only.
+    """
+    from .models import Decision
+    out = []
+    for decision, index in zip(decisions, candidates, strict=True):
+        d = Decision(**decision)
+        if index == target:
+            label = 'apply' if side == 'positive' else 'suppress'
+            d = Decision(unit_id=d.unit_id, decision=label, p_apply=float(label == 'apply'), reason='gate oracle')
+        elif mode == 'O2':
+            d = Decision(unit_id=d.unit_id, decision='suppress', p_apply=0., reason='gate oracle: companion')
+        out.append(d)
+    return out
+
+
+def read_units(path):
+    """Units of a frozen P1 memory store, read-only."""
+    import sqlite3
+    from .store import stored_unit
+    db = sqlite3.connect(f'file:{path}?mode=ro', uri=True)
+    try:
+        return [stored_unit(r[0]) for r in db.execute('SELECT json FROM units ORDER BY id')]
+    finally:
+        db.close()
+
+
+def render_oracle(units, decisions, cfg):
+    """Render exactly as L4 does; raw evidence is absent for given-preference stores."""
+    from .pipeline import SPM, Candidate
+    by_id = {u.id: u for u in units}
+    candidates = [Candidate(by_id[d.unit_id], 0.) for d in decisions]
+    return SPM('the user', None, None, cfg).render(candidates, decisions)
+
+
+def gate_correct(record, side):
+    """Correct by rendering effect: only 'apply' reaches the generator.
+
+    'uncertain', 'suppress' and an unretrieved target are all omitted from the
+    context, so on the negative side they are correct and on the positive side wrong.
+    """
+    applied = (record['spm'][side]['target_decision'] or {}).get('decision') == 'apply'
+    return applied if side == 'positive' else not applied
+
+
 def selection_order(item, side, seed):
     rng = random.Random(f'{seed}:select:{item["id"]}:{side}')
     order = list(pairset.REPLY_ROLES)

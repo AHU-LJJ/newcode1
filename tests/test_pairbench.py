@@ -83,6 +83,49 @@ def test_bootstrap_pair_returns_interval():
     assert 0 < ci[0] <= .5 <= ci[1] < 1
 
 
+def decisions(*labels):
+    return [dict(unit_id=f'u{i}', decision=d, p_apply=float(d == 'apply'), reason='gated') for i, d in enumerate(labels)]
+
+
+@pytest.mark.parametrize('side,expected', [('positive', 'apply'), ('negative', 'suppress')])
+def test_oracle_o1_fixes_only_the_target(side, expected):
+    out = pairbench.oracle_decisions(decisions('apply', 'suppress', 'uncertain'), [3, 7, 9], 7, side, 'O1')
+    assert [d.decision for d in out] == ['apply', expected, 'uncertain']
+    assert out[1].reason == 'gate oracle' and out[0].reason == 'gated'
+
+
+def test_oracle_o2_suppresses_companions_and_keeps_missing_target_missing():
+    out = pairbench.oracle_decisions(decisions('apply', 'apply'), [3, 7], 7, 'positive', 'O2')
+    assert [d.decision for d in out] == ['suppress', 'apply']
+    missing = pairbench.oracle_decisions(decisions('apply', 'apply'), [3, 4], 7, 'positive', 'O2')
+    assert [d.decision for d in missing] == ['suppress', 'suppress']
+
+
+def test_render_oracle_omits_suppressed_target_and_matches_spm_render():
+    from spm.config import VARIANTS
+    from spm.models import Decision, PrefUnit, Evidence
+    from spm.pipeline import SPM, Candidate
+    def unit(uid, text):
+        return PrefUnit(id=uid, content=text, polarity='prefer', scope='food', domain='food', nature='taste',
+                        evidence=[Evidence(episode_id='e', turn_idx=0, span=text, expression='explicit')], confidence=.9)
+    units = [unit('u0', 'The user loves spicy food.'), unit('u1', 'The user likes tea.')]
+    cfg = VARIANTS['v6_compact']
+    ds = [Decision(**d) for d in decisions('suppress', 'apply')]
+    text = pairbench.render_oracle(units, ds, cfg)
+    assert 'spicy' not in text and 'tea' in text
+    assert text == SPM('u', None, None, cfg).render([Candidate(u, 0.) for u in units], ds)
+
+
+def test_gate_correct_uses_side_label():
+    record = dict(spm=dict(positive=dict(target_decision=dict(decision='apply')),
+                           negative=dict(target_decision=dict(decision='uncertain'))))
+    # uncertain is not rendered, so on the negative side it behaves like suppress
+    assert pairbench.gate_correct(record, 'positive') and pairbench.gate_correct(record, 'negative')
+    assert not pairbench.gate_correct(dict(spm=dict(negative=dict(target_decision=dict(decision='apply')))), 'negative')
+    assert not pairbench.gate_correct(dict(spm=dict(positive=dict(target_decision=None))), 'positive')
+    assert pairbench.gate_correct(dict(spm=dict(negative=dict(target_decision=None))), 'negative')
+
+
 def test_grade_schema_rejects_off_scale_uptake():
     with pytest.raises(Exception):
         pairbench.Grade(uptake=0.7, situation_fit=1, hedged=False, reason='x')
