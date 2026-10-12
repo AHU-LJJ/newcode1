@@ -10,6 +10,7 @@ from pathlib import Path
 import random
 import sqlite3
 import time
+from urllib.parse import urlparse
 
 import httpx
 import numpy as np
@@ -37,9 +38,11 @@ REQUEST_CONTEXT = ContextVar('spm_request_context', default={})
 class Gateway:
     def __init__(self, endpoints, cache_path, concurrency=16, max_calls=2000,
                  max_tokens=5_000_000, timeout=90, retries=5, max_output=4096,
-                 tpm_limits=None, tpm_tokenizer=None):
+                 tpm_limits=None, tpm_tokenizer=None, provider_limits=None):
         self.endpoints = endpoints
         self.sem = asyncio.Semaphore(concurrency)
+        # Optional per-provider caps keyed by URL host, inside the global cap.
+        self.provider_sems = {host: asyncio.Semaphore(n) for host, n in (provider_limits or {}).items()}
         self.http = httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=20),
             follow_redirects=False, limits=httpx.Limits(max_connections=concurrency, max_keepalive_connections=concurrency))
         Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
@@ -103,13 +106,19 @@ class Gateway:
         self.db.commit()
 
     @asynccontextmanager
-    async def _admission(self, service, model, payload):
+    async def _admission(self, service, model, payload, host=None):
         # A throttled Qwen call must not occupy an HTTP slot needed by BGE/judge.
         reservation=None
         if self.limiter and model in self.limiter.capacity:
             reservation=await self.limiter.acquire(service,model,self.token_counter(payload))
+        provider=self.provider_sems.get(host)
         try:
-            await self.sem.acquire()
+            if provider:await provider.acquire()
+            try:
+                await self.sem.acquire()
+            except BaseException:
+                if provider:provider.release()
+                raise
         except BaseException:
             if self.limiter:self.limiter.finish(reservation,0)
             raise
@@ -117,6 +126,7 @@ class Gateway:
             yield reservation
         finally:
             self.sem.release()
+            if provider:provider.release()
 
     async def _request(self, role, path, payload, tag):
         endpoint = self.endpoints[role]
@@ -132,7 +142,7 @@ class Gateway:
                 await asyncio.sleep(remaining)
             record = dict(attempt=attempt + 1, usage={}, usage_complete=False)
             retry, delay = False, min(30, 2 ** attempt) + random.random()
-            async with self._admission(service,endpoint.model,payload) as rate_reservation:
+            async with self._admission(service,endpoint.model,payload,urlparse(endpoint.base_url).netloc) as rate_reservation:
                 # Waiting requests must recheck after another request reports 402.
                 check_payment()
                 try:
@@ -234,7 +244,8 @@ class Gateway:
             instructions += "\nReturn only a JSON object with this schema:\n" + json.dumps(schema.model_json_schema())
         payload = dict(model=endpoint.model, temperature=0, max_tokens=max_tokens or self.max_output,
                        messages=[dict(role="system", content=instructions), dict(role="user", content=original)])
-        if "deepseek-r1" not in endpoint.model.lower():
+        # SiliconFlow-only switch; other providers (e.g. Zhipu) reject the field.
+        if "deepseek-r1" not in endpoint.model.lower() and "siliconflow" in endpoint.base_url:
             payload["enable_thinking"] = False
         if schema is not None:
             payload["response_format"] = {"type": "json_object"}
