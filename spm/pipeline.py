@@ -455,7 +455,7 @@ as evidence, with expression explicit. Do not return span, turn_idx or expressio
                 # Full grounded evidence remains in the store/trace. Gate inputs are bounded.
                 value['evidence']=[dict(e.model_dump(mode='json'),span=e.span[:400]) for e in unit.evidence[-2:]]
                 return value
-            gate_prompt=prompts.GATE_ANSWER_FILTER if self.cfg.gate_policy=='answer_filter' else prompts.GATE
+            gate_prompt={'answer_filter':prompts.GATE_ANSWER_FILTER,'situational':prompts.GATE_SITUATIONAL}.get(self.cfg.gate_policy,prompts.GATE)
             if self.cfg.tool_protocol in {'compact','small','flags'}:
                 def indexed_summary(unit):
                     value=summary(unit)

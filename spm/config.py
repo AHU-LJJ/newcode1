@@ -47,7 +47,7 @@ class SPMConfig:
             raise ValueError('Invalid gate completion')
         if self.gate_completion == 'targeted' and self.tool_protocol not in {'compact','small','flags'}:
             raise ValueError('Targeted completion requires compact protocol')
-        if self.gate_policy not in {"legacy", "answer_filter"}:
+        if self.gate_policy not in {"legacy", "answer_filter", "situational"}:
             raise ValueError("Invalid gate policy")
         if self.arbitration not in {"overwrite", "branch", "arbitrate"}:
             raise ValueError("Invalid arbitration")
@@ -94,6 +94,7 @@ VARIANTS['v6_m9'] = replace(VARIANTS['v6_m8'], tool_protocol='flags')
 VARIANTS['typed_m9'] = replace(VARIANTS['typed_m8'], tool_protocol='flags')
 VARIANTS['raw_m9'] = replace(VARIANTS['raw_m8'], tool_protocol='flags')
 VARIANTS['b2_matched'] = replace(VARIANTS['v6_m6'], use_gate=False)
+VARIANTS['v6_situational'] = replace(VARIANTS['v6_compact'], gate_policy='situational')
 VARIANTS["no_condition"] = replace(VARIANTS["v5"], use_condition=False)
 VARIANTS["no_anticipation"] = replace(VARIANTS["v5"], use_anticipation=False)
 METHODS = list(VARIANTS) + ["b0", "b1", "b2", "b4"]

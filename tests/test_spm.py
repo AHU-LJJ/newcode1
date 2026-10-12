@@ -608,6 +608,16 @@ def test_new_default_matches_compact_v6_and_legacy_remains_explicit():
     assert VARIANTS['v6'].tool_protocol=='legacy' and VARIANTS['v6'].use_raw_evidence
     assert VARIANTS['v4'].gate_policy=='legacy'
     assert VARIANTS['v5'].write_signature()==VARIANTS['v6'].write_signature()
+    # The situational gate is opt-in, read-only, and shares written memory with v6_compact.
+    assert VARIANTS['v6_situational'].gate_policy=='situational'
+    assert VARIANTS['v6_situational'].write_signature()==VARIANTS['v6_compact'].write_signature()
+    assert VARIANTS['v6_situational'].dump()=={**VARIANTS['v6_compact'].dump(),'gate_policy':'situational'}
+
+
+def test_situational_gate_prompt_extends_answer_filter():
+    from spm import prompts
+    assert prompts.GATE_SITUATIONAL.startswith(prompts.GATE_ANSWER_FILTER)
+    assert 'Topical relevance is not applicability' in prompts.GATE_SITUATIONAL
 
 
 def test_raw_evidence_recovers_empty_extraction_with_bound_and_no_given_leak(tmp_path):

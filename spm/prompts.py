@@ -68,6 +68,25 @@ or requirement. Suppress only when the preference would have no supported effect
 the answer, or its stated conditions do not match. Respect an explicit current change
 or relaxation, and do not invent stronger restrictions or broaden unsupported values.
 """
+GATE_SITUATIONAL = GATE_ANSWER_FILTER + """
+Topical relevance is not applicability. A preference can match the request's domain
+exactly and still be the wrong thing to apply here. Before scoring each candidate,
+read the user's CURRENT situation in the request and check whether it changes the
+right answer:
+- who the result is for, or who shares it (guests, children, a manager, a recipient);
+- the role the user is acting in (host, teacher, organizer, writing for someone else);
+- the occasion or setting;
+- time pressure, budget, equipment, space or other resource limits;
+- a temporary physical state (injury, illness, fatigue, a headache);
+- a temporary emotional state (grief, stress, exhaustion, nerves).
+Taste and style preferences describe what the user enjoys for themselves in ordinary
+circumstances. When the current situation makes following one of them unsuitable,
+impractical or harmful for this request, give it a LOW p_apply, even though it is
+on-topic and the user stated it clearly. Safety constraints such as allergies still
+apply whenever relevant. When the situation does not change the right answer, keep
+applying the preference as usual; do not suppress preferences merely because a
+situation is mentioned.
+"""
 NORMALIZE = """Normalize explicitly supplied preferences. Return one unit per input,
 with exact USER span and turn_idx. Preserve meaning and polarity, classify nature
 and scope, and extract conditions only when stated. These preferences are known

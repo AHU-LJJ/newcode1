@@ -126,6 +126,18 @@ def test_gate_correct_uses_side_label():
     assert pairbench.gate_correct(dict(spm=dict(negative=dict(target_decision=None))), 'negative')
 
 
+def test_calibrated_generation_maps_negative_uptake_through_human_rates():
+    p_zero = {0.: 1., .5: .4, 1.: 0.}
+    rows = [dict(positive=g(1), negative=g(0)),        # success with certainty
+            dict(positive=g(1), negative=g(.5)),       # success with probability 0.4
+            dict(positive=g(1), negative=g(1)),        # never success
+            dict(positive=g(1, hedged=True), negative=g(0))]
+    m = pairbench.calibrated_generation(rows, p_zero)
+    assert m['pair_success'] == pytest.approx((1 + .4) / 3)
+    assert m['use_both'] == pytest.approx((0 + .6 + 1) / 3)
+    assert pairbench.calibrated_generation([], p_zero) is None
+
+
 def test_grade_schema_rejects_off_scale_uptake():
     with pytest.raises(Exception):
         pairbench.Grade(uptake=0.7, situation_fit=1, hedged=False, reason='x')

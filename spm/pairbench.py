@@ -222,6 +222,26 @@ def generation_metrics(rows):
                 situation_fit=fit/(2*n))
 
 
+def calibrated_generation(rows, p_zero):
+    """Expected generation metrics with negative uptake mapped through human labels.
+
+    p_zero[b] is P(human uptake = 0 | judge uptake b) on negative sides; positive
+    sides and situation fit are taken as judged. Hedged pairs are excluded as usual.
+    """
+    kept = [r for r in rows if not (r['positive']['hedged'] or r['negative']['hedged'])]
+    if not kept:
+        return None
+    success = both = neg = 0.
+    for r in kept:
+        z = p_zero[float(r['negative']['uptake'])]
+        neg += 1 - z
+        if r['positive']['uptake'] >= .5:
+            both += 1 - z
+            if r['positive']['situation_fit'] == 1 and r['negative']['situation_fit'] == 1:
+                success += z
+    return dict(pair_success=success/len(kept), use_both=both/len(kept), use_neg=neg/len(kept))
+
+
 def bootstrap_pair(values_a, values_b, groups, fn_a, fn_b, seed=42, resamples=2000):
     """Paired cluster bootstrap of fn_a(a)-fn_b(b); a and b are aligned per item."""
     keys = sorted(set(groups))

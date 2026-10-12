@@ -118,6 +118,53 @@ def score(args):
     print(json.dumps(result, ensure_ascii=False, indent=1))
 
 
+def calibrate(args):
+    """EXPLORATORY: re-estimate P1 generation metrics with human-calibrated negative uptake.
+
+    Each negative side's judge bucket is mapped to P(human uptake = 0 | bucket) from
+    the annotated sample; positive sides and fit are kept as judged. Uncertainty from
+    the 30/15/15 annotation sample is not propagated into the intervals.
+    """
+    from spm import pairbench
+    out = Path(args.output)
+    key = {r['row_id']: r for r in read(out/'key.json')['rows']}
+    with open(args.sheet or out/'annotation_sheet_final.csv', encoding='utf-8-sig') as f:
+        filled = [r for r in csv.DictReader(f) if r['uptake (0/0.5/1)'].strip()]
+    counts = {}
+    for r in filled:
+        bucket = float(key[int(r['row_id'])]['judge']['uptake'])
+        counts.setdefault(bucket, []).append(parse_uptake(r['uptake (0/0.5/1)']))
+    p_zero = {b: sum(h == 0 for h in hs)/len(hs) for b, hs in counts.items()}
+    expected = lambda rows: pairbench.calibrated_generation(rows, p_zero)
+
+    p1 = Path(args.p1)
+    plan = read(p1/'plan.json')
+    result = dict(p_human_zero_given_judge={str(k): v for k, v in sorted(p_zero.items())},
+                  annotated_per_bucket={str(k): len(v) for k, v in sorted(counts.items())}, settings={},
+                  note='Exploratory, defined after P1; annotation-sample uncertainty not propagated.')
+    for setting in plan['settings']:
+        records = [read(x) for x in sorted((p1/'samples'/setting).glob('*.json'))]
+        ids = [r['id'] for r in records]
+        block = {}
+        for method in plan['methods']:
+            sel = [{s: r['methods'][method][s]['selected'] for s in pairbench.SIDES} for r in records]
+            gen = [{s: r['methods'][method][s]['grade'] for s in pairbench.SIDES} for r in records]
+            sel_ps = lambda rows: pairbench.selection_metrics(rows)['pair_success']
+            gen_ps = lambda rows: (expected(rows) or {}).get('pair_success')
+            e = expected(gen)
+            block[method] = dict(judge=pairbench.generation_metrics(gen).get('pair_success'), calibrated=e,
+                                 gap=sel_ps(sel)-e['pair_success'],
+                                 gap_95ci=pairbench.bootstrap_pair(sel, gen, ids, sel_ps, gen_ps, seed=plan['seed']))
+        result['settings'][setting] = block
+    (out/'calibrated_p1.json').write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n')
+    print(json.dumps(result['p_human_zero_given_judge']))
+    for setting, block in result['settings'].items():
+        for method, m in block.items():
+            c, ci = m['calibrated'], m['gap_95ci']
+            print(f'{setting:6s} {method:3s} genPS judge={m["judge"]:.3f} calibrated={c["pair_success"]:.3f} '
+                  f'use_both={c["use_both"]:.3f} gap={m["gap"]:+.3f} [{ci[0]:+.3f}, {ci[1]:+.3f}]')
+
+
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest='command', required=True)
@@ -127,8 +174,10 @@ if __name__ == '__main__':
     e.add_argument('--zero', type=int, default=15)
     s = sub.add_parser('score')
     s.add_argument('--sheet')
-    for q in (e, s):
+    c = sub.add_parser('calibrate')
+    c.add_argument('--sheet')
+    for q in (e, s, c):
         q.add_argument('--p1', default='runs/spm/p1')
         q.add_argument('--output', default='runs/spm/p1_annotation')
     args = p.parse_args()
-    export(args) if args.command == 'export' else score(args)
+    dict(export=export, score=score, calibrate=calibrate)[args.command](args)
